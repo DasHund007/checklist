@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #1b202c;
+            color: #bac7e4;
+        }
+        h1 {
+            text-align: center;
+            color: #d1dfff;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            background-color: #13161f;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #82aaff;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        span {
+            color: #ff4579;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            border: 1px solid #37c886;
+            border-radius: 5px;
+            background-color: #13161f;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            background-color: #13161f;
+            color: #bac7e4;
+            outline: none;
+        }
+        button {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #37c886cc;
+            color: #f8fafd;
+            border: none;
+            border-radius: 0 3px 3px 0;
+        }
+        button:hover {
+            background-color: #37c886;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff4579;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            color: #ff5722;
+        }
+        .delete-btn:before {
+            content: '\1F5D1';
+            font-size: 20px;
+        }
+        .drag-icon {
+            cursor: grab;
+            font-size: 20px;
+            color: #d1dfff70;
+        }
+        .drag-icon:hover {
+            color: #d1dfff;
+        }
+        .task-container {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    <div class="input-container">
+        <input type="text" id="taskInput" placeholder="New task...">
+        <button onclick="addTask()">Add</button>
+    </div>
+    <ul id="taskList"></ul>
+
+    <script>
+        let draggedItem = null;
+
+        window.onload = function() {
+            loadTasks();
+            const taskInput = document.getElementById("taskInput");
+            taskInput.addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    addTask();
+                }
+            });
+        };
+
+        function addTask() {
+            const taskInput = document.getElementById("taskInput");
+            const taskText = taskInput.value.trim();
+            if (taskText === "") return;
+            const taskList = document.getElementById("taskList");
+            const li = createTaskElement(taskText, false);
+            taskList.appendChild(li);
+            taskInput.value = "";
+            saveTasks();
+        }
+
+        function createTaskElement(taskText, isChecked) {
+            const li = document.createElement("li");
+            li.draggable = true;
+            li.ondragstart = dragStart;
+            li.ondragover = dragOver;
+            li.ondrop = drop;
+
+            const taskContainer = document.createElement("div");
+            taskContainer.className = "task-container";
+
+            const deleteButton = document.createElement("button");
+            deleteButton.classList.add("delete-btn");
+            deleteButton.onclick = function() {
+                li.remove();
+                saveTasks();
+            };
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = isChecked;
+            checkbox.style.marginRight = "10px";
+            checkbox.onclick = saveTasks;
+
+            const taskSpan = document.createElement("span");
+            taskSpan.textContent = taskText;
+
+            const dragIcon = document.createElement("span");
+            dragIcon.className = "drag-icon";
+            dragIcon.textContent = "\u2630";
+
+            taskContainer.appendChild(deleteButton);
+            taskContainer.appendChild(checkbox);
+            taskContainer.appendChild(taskSpan);
+
+            li.appendChild(taskContainer);
+            li.appendChild(dragIcon);
+
+            return li;
+        }
+
+        function saveTasks() {
+            const tasks = [];
+            const taskList = document.getElementById("taskList").children;
+            for (let task of taskList) {
+                tasks.push({
+                    text: task.querySelector("span").textContent,
+                    checked: task.querySelector("input").checked
+                });
+            }
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const savedTasks = JSON.parse(localStorage.getItem("tasks"));
+            if (savedTasks) {
+                const taskList = document.getElementById("taskList");
+                savedTasks.forEach(task => {
+                    const li = createTaskElement(task.text, task.checked);
+                    taskList.appendChild(li);
+                });
+            }
+        }
+
+        function dragStart(event) {
+            draggedItem = event.target;
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            const taskList = document.getElementById("taskList");
+            if (event.target.closest("li") && draggedItem !== event.target.closest("li")) {
+                const targetItem = event.target.closest("li");
+                const draggedIndex = Array.from(taskList.children).indexOf(draggedItem);
+                const targetIndex = Array.from(taskList.children).indexOf(targetItem);
+                if (draggedIndex < targetIndex) {
+                    taskList.insertBefore(draggedItem, targetItem.nextSibling);
+                } else {
+                    taskList.insertBefore(draggedItem, targetItem);
+                }
+                saveTasks();
+            }
+        }
+    </script>
+</body>
+</html>
